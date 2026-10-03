@@ -14,7 +14,13 @@ export function readRequestGeo(request: Request): RequestGeo {
   const realIp = request.headers.get("x-real-ip")?.trim();
   const vercelIp = ipAddress(request);
   const ip = normalizeIp(vercelIp || realIp || forwarded || "");
-  const city = geo.city ? decodeURIComponent(geo.city) : "";
+  const cityRaw = geo.city || "";
+  let city = cityRaw;
+  try {
+    city = cityRaw ? decodeURIComponent(cityRaw) : "";
+  } catch {
+    city = cityRaw;
+  }
   return {
     ip: ip || "unknown",
     country: (geo.country || "").toUpperCase(),

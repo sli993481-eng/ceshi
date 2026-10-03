@@ -62,7 +62,10 @@ export async function ensureIndexes(db: Db) {
       db.collection("device_rules").createIndexes([
         { key: { fingerprint: 1 }, unique: true },
       ]),
-      db.collection("uploads").createIndexes([{ key: { createdAt: -1 } }]),
+      db.collection("uploads").createIndexes([
+        { key: { createdAt: -1 } },
+        { key: { pathname: 1 }, unique: true },
+      ]),
       db.collection("audits").createIndexes([{ key: { createdAt: -1 } }]),
       db.collection("rate_buckets").createIndexes([{ key: { key: 1 }, unique: true }]),
     ]);

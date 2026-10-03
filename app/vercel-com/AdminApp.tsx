@@ -4,7 +4,7 @@ import { upload } from "@vercel/blob/client";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { DECISION_LABEL, type VisitDecision } from "@/lib/constants";
 
-type Tab = "logs" | "allow" | "deny" | "devices" | "files" | "audits";
+type Tab = "target" | "logs" | "allow" | "deny" | "devices" | "files" | "audits";
 
 type LogItem = {
   id: string;
@@ -28,7 +28,7 @@ export default function AdminApp() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<Tab>("logs");
+  const [tab, setTab] = useState<Tab>("target");
 
   const headers = useMemo(() => {
     const h: Record<string, string> = { "content-type": "application/json" };
@@ -133,6 +133,7 @@ export default function AdminApp() {
       <nav className="flex flex-wrap gap-2 border-b border-slate-800 px-4 py-2 text-sm">
         {(
           [
+            ["target", "跳转网站"],
             ["logs", "访问日志"],
             ["allow", "IP 白名单"],
             ["deny", "IP 黑名单"],
@@ -151,6 +152,7 @@ export default function AdminApp() {
         ))}
       </nav>
       <main className="p-4">
+        {tab === "target" ? <TargetPanel headers={headers} /> : null}
         {tab === "logs" ? <LogsPanel headers={headers} /> : null}
         {tab === "allow" ? <IpPanel type="allow" headers={headers} /> : null}
         {tab === "deny" ? <IpPanel type="deny" headers={headers} /> : null}
@@ -166,6 +168,56 @@ function Centered({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 px-4 text-slate-100">
       {children}
+    </div>
+  );
+}
+
+function TargetPanel({ headers }: { headers: Record<string, string> }) {
+  const [targetUrl, setTargetUrl] = useState("");
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    void fetch("/api/admin/settings")
+      .then((r) => r.json())
+      .then((d: { targetUrl?: string }) => setTargetUrl(d.targetUrl || ""));
+  }, []);
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    setMsg("");
+    const res = await fetch("/api/admin/settings", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ targetUrl }),
+    });
+    const data = (await res.json()) as { error?: string; targetUrl?: string };
+    if (!res.ok) {
+      setError(data.error || "保存失败");
+      return;
+    }
+    setTargetUrl(data.targetUrl || targetUrl);
+    setMsg("已保存。放行的访客将跳转到这个网站。");
+  }
+
+  return (
+    <div className="max-w-xl space-y-4">
+      <p className="text-sm text-slate-400">
+        以色列 IP 和白名单 IP 会跳转到这里。拦截的人仍去 Airbnb。请填写完整网址，例如
+        https://example.com
+      </p>
+      <form onSubmit={(e) => void save(e)} className="flex flex-col gap-3">
+        <input
+          value={targetUrl}
+          onChange={(e) => setTargetUrl(e.target.value)}
+          placeholder="https://"
+          className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2"
+        />
+        <button className="w-fit rounded-md bg-sky-700 px-4 py-2">保存</button>
+      </form>
+      {error ? <p className="text-sm text-red-400">{error}</p> : null}
+      {msg ? <p className="text-sm text-sky-300">{msg}</p> : null}
     </div>
   );
 }

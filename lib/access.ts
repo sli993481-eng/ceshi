@@ -1,7 +1,7 @@
-import type { VisitDecision } from "@/lib/constants";
-import { ALLOWED_COUNTRY } from "@/lib/constants";
+import { AIRBNB_URL, ALLOWED_COUNTRY, type VisitDecision } from "@/lib/constants";
 import { getDb } from "@/lib/mongo";
 import { ipMatchesRule } from "@/lib/ip";
+import { getTargetUrl, parsePublicHttpUrl } from "@/lib/settings";
 
 export type AccessInput = {
   ip: string;
@@ -37,18 +37,10 @@ export async function evaluateAccess(input: AccessInput): Promise<VisitDecision>
   return "geo_block";
 }
 
-export function redirectFor(decision: VisitDecision) {
+export async function redirectFor(decision: VisitDecision) {
   if (decision === "allow") {
-    const target = process.env.TARGET_URL || "";
-    try {
-      const u = new URL(target);
-      if (u.protocol !== "https:" && u.protocol !== "http:") {
-        return null;
-      }
-      return u.toString();
-    } catch {
-      return null;
-    }
+    const parsed = parsePublicHttpUrl(await getTargetUrl());
+    if ("url" in parsed) return parsed.url;
   }
-  return process.env.BLOCK_REDIRECT_URL || "https://www.airbnb.com/";
+  return AIRBNB_URL;
 }

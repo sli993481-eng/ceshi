@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { evaluateAccess, redirectFor } from "@/lib/access";
 import { AIRBNB_URL, type VisitDecision } from "@/lib/constants";
-import { isObviousBot } from "@/lib/bots";
 import { readRequestGeo } from "@/lib/geo";
 import { hasMongoUri } from "@/lib/mongo";
 import { hitVisitRate } from "@/lib/rate-limit";
@@ -21,7 +20,6 @@ export async function POST(request: Request) {
 async function handle(request: Request) {
   const geo = readRequestGeo(request);
   const ua = request.headers.get("user-agent") || "";
-  const isBot = true;
   let decision: VisitDecision = "bot";
   let dest = AIRBNB_URL;
 
@@ -34,10 +32,10 @@ async function handle(request: Request) {
       ip: geo.ip,
       country: geo.country,
       fingerprint: "",
-      isBot: isBot || isObviousBot(ua, request.headers),
+      isBot: true,
       rateLimited: rate.limited,
     });
-    dest = redirectFor(decision) || AIRBNB_URL;
+    dest = (await redirectFor(decision)) || AIRBNB_URL;
     await logVisit({
       geo,
       ua,

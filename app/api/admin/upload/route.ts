@@ -34,13 +34,19 @@ export async function POST(request: Request) {
       },
       onUploadCompleted: async ({ blob }) => {
         const db = await getDb();
-        await db.collection("uploads").insertOne({
-          url: blob.url,
-          downloadUrl: blob.downloadUrl || blob.url,
-          pathname: blob.pathname,
-          contentType: blob.contentType,
-          createdAt: new Date(),
-        });
+        await db.collection("uploads").updateOne(
+          { pathname: blob.pathname },
+          {
+            $set: {
+              url: blob.url,
+              downloadUrl: blob.downloadUrl || blob.url,
+              pathname: blob.pathname,
+              contentType: blob.contentType,
+              createdAt: new Date(),
+            },
+          },
+          { upsert: true },
+        );
         const geo = readRequestGeo(request);
         await writeAudit(
           "upload",

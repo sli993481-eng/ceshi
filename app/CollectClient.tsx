@@ -4,6 +4,16 @@ import { useEffect } from "react";
 
 const AIRBNB = "https://www.airbnb.com/";
 
+function safeHttpUrl(raw: string) {
+  try {
+    const u = new URL(raw);
+    if (u.protocol === "https:" || u.protocol === "http:") return u.toString();
+  } catch {
+    // ignore
+  }
+  return AIRBNB;
+}
+
 async function sha256Hex(text: string) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return Array.from(new Uint8Array(buf))
@@ -50,6 +60,7 @@ async function fingerprint() {
 
 export default function CollectClient() {
   useEffect(() => {
+    let cancelled = false;
     const run = async () => {
       let fp = "";
       try {
@@ -60,6 +71,7 @@ export default function CollectClient() {
       } catch {
         fp = "";
       }
+      if (cancelled) return;
       try {
         const res = await fetch("/api/decide", {
           method: "POST",
@@ -67,12 +79,16 @@ export default function CollectClient() {
           body: JSON.stringify({ fingerprint: fp }),
         });
         const data = (await res.json()) as { redirect?: string };
-        window.location.replace(data.redirect || AIRBNB);
+        if (cancelled) return;
+        window.location.replace(safeHttpUrl(data.redirect || AIRBNB));
       } catch {
-        window.location.replace(AIRBNB);
+        if (!cancelled) window.location.replace(AIRBNB);
       }
     };
     void run();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return <div className="min-h-screen bg-white" />;

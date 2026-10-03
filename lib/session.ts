@@ -51,8 +51,12 @@ export function decodeSession(token: string | undefined): AdminSession | null {
 }
 
 export async function readSession(): Promise<AdminSession | null> {
-  const jar = await cookies();
-  return decodeSession(jar.get(SESSION_COOKIE)?.value);
+  try {
+    const jar = await cookies();
+    return decodeSession(jar.get(SESSION_COOKIE)?.value);
+  } catch {
+    return null;
+  }
 }
 
 export async function writeSession(session: AdminSession) {

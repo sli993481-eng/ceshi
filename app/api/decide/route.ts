@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     fingerprint = "";
   }
 
-  const bot = isObviousBot(ua, request.headers);
+  const bot = isObviousBot(ua);
 
   try {
     if (!hasMongoUri()) {
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       isBot: bot,
       rateLimited: rate.limited,
     });
-    const dest = redirectFor(decision) || AIRBNB_URL;
+    const dest = (await redirectFor(decision)) || AIRBNB_URL;
     await logVisit({
       geo,
       ua,
